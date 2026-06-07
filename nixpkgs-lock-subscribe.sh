@@ -124,12 +124,6 @@ for repo in $REPOS; do
     continue
   fi
 
-  if ! grep -q 'nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11"' flake.nix; then
-    echo "SKIP: no nixpkgs 25.11 direct pin"
-    skipped+=("$repo: no direct nixpkgs pin")
-    continue
-  fi
-
   if grep -q 'nixpkgs-lock' flake.nix; then
     PINS_WORKFLOW=".github/workflows/update-pins.yml"
     if [[ -f "$PINS_WORKFLOW" ]] && ! grep -q "cron: '30 3 \* \* \*'" "$PINS_WORKFLOW"; then
@@ -150,6 +144,12 @@ for repo in $REPOS; do
       echo "SKIP: already converted, cron OK"
       skipped+=("$repo: already converted")
     fi
+    continue
+  fi
+
+  if ! grep -q 'nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11"' flake.nix; then
+    echo "SKIP: no nixpkgs 25.11 direct pin"
+    skipped+=("$repo: no direct nixpkgs pin")
     continue
   fi
 
