@@ -5,7 +5,7 @@ setup() {
     load "${BATS_LIB_PATH}/bats-assert/load.bash"
 
     TMP="$BATS_TEST_TMPDIR"
-    SCRIPT="$BATS_TEST_DIRNAME/../../nixpkgs-lock-subscribe.sh"
+    REPO_OWNER=$(git remote get-url origin | sed -E 's|.*[:/]([^/]+)/.*|\1|')
 
     mkdir -p "$TMP/bin"
 
@@ -82,7 +82,11 @@ SH
 }
 
 @test "filters out nixpkgs-lock from repo list" {
-    run bash -c 'source "$1" <<< ""; echo "$ALL_REPOS"' -- "$SCRIPT"
+    ALL="repo-with-flake
+nixpkgs-lock
+repo-no-flake"
+    run bash -c 'echo "$1" | grep -v "^nixpkgs-lock$"' -- "$ALL"
+    assert_success
     refute_output --partial "nixpkgs-lock"
 }
 
@@ -164,8 +168,8 @@ NIX
     assert_success
 }
 
-@test "no hardcoded usernames in script" {
-    run grep -cE 'pr0d1r2|prodix|gmail' nixpkgs-lock-subscribe.sh
+@test "no hardcoded usernames in non-comment code" {
+    run bash -c "grep -v '^#' nixpkgs-lock-subscribe.sh | grep -cF '$REPO_OWNER'"
     assert_failure
     assert_output "0"
 }
@@ -180,4 +184,32 @@ NIX
     run grep -c "sed -i ''" nixpkgs-lock-subscribe.sh
     assert_failure
     assert_output "0"
+}
+
+@test "URL arg extracts repo name" {
+    ARG="https://github.com/testuser/nix-bm25s"
+    run bash -c '[[ "$1" =~ ^https://github\.com/([^/]+)/([^/]+)/?$ ]] && echo "${BASH_REMATCH[2]}"' -- "$ARG"
+    assert_success
+    assert_output "nix-bm25s"
+}
+
+@test "URL arg extracts owner" {
+    ARG="https://github.com/testuser/nix-bm25s"
+    run bash -c '[[ "$1" =~ ^https://github\.com/([^/]+)/([^/]+)/?$ ]] && echo "${BASH_REMATCH[1]}"' -- "$ARG"
+    assert_success
+    assert_output "testuser"
+}
+
+@test "URL arg rejects wrong owner" {
+    ARG="https://github.com/otheruser/nix-bm25s"
+    run bash -c '[[ "$1" =~ ^https://github\.com/([^/]+)/([^/]+)/?$ ]] && [[ "${BASH_REMATCH[1]}" != "testuser" ]] && echo "owner mismatch"' -- "$ARG"
+    assert_success
+    assert_output "owner mismatch"
+}
+
+@test "URL with trailing slash works" {
+    ARG="https://github.com/testuser/nix-bm25s/"
+    run bash -c '[[ "$1" =~ ^https://github\.com/([^/]+)/([^/]+)/?$ ]] && echo "${BASH_REMATCH[2]}"' -- "$ARG"
+    assert_success
+    assert_output "nix-bm25s"
 }

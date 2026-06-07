@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 #
 # nixpkgs-lock-subscribe — Subscribe nix flake repos to centralized nixpkgs pin
 #
@@ -23,9 +24,9 @@
 #   - SSH access to GitHub repos (git@github.com:...)
 #
 # Usage:
-#   nix run github:pr0d1r2/nixpkgs-lock-subscribe              # all public repos
-#   nix run github:pr0d1r2/nixpkgs-lock-subscribe -- 'nix-*'   # only nix-* repos
-#   nix run github:pr0d1r2/nixpkgs-lock-subscribe -- 'nix-lefthook-*'  # subset
+#   nix run github:pr0d1r2/nixpkgs-lock-subscribe                                        # all public repos
+#   nix run github:pr0d1r2/nixpkgs-lock-subscribe -- 'nix-*'                              # only nix-* repos
+#   nix run github:pr0d1r2/nixpkgs-lock-subscribe -- https://github.com/pr0d1r2/nix-bm25s # single repo
 #
 
 GITHUB_USER=$(gh api /user --jq .login)
@@ -35,22 +36,38 @@ GIT_EMAIL=$(git config user.email)
 WORKDIR=$(mktemp -d)
 trap 'echo "Workdir: $WORKDIR (not cleaned up for inspection)"' EXIT
 
-PATTERN=${1:-}
-ALL_REPOS=$(gh repo list "$GITHUB_USER" --limit 500 --json name,isPrivate --jq '.[] | select(.isPrivate == false) | .name' \
-  | grep -v '^nixpkgs-lock$' | sort)
+ARG=${1:-}
 
-if [[ -n "$PATTERN" ]]; then
-  REGEX="^${PATTERN//\*/.*}$"
-  REPOS=$(echo "$ALL_REPOS" | grep -E "$REGEX")
+if [[ "$ARG" =~ ^https://github\.com/([^/]+)/([^/]+)/?$ ]]; then
+  URL_OWNER="${BASH_REMATCH[1]}"
+  URL_REPO="${BASH_REMATCH[2]}"
+  if [[ "$URL_OWNER" != "$GITHUB_USER" ]]; then
+    echo "ERROR: repo owner '$URL_OWNER' does not match authenticated user '$GITHUB_USER'"
+    exit 1
+  fi
+  REPOS="$URL_REPO"
 else
-  REPOS=$ALL_REPOS
+  ALL_REPOS=$(gh repo list "$GITHUB_USER" --limit 500 --json name,isPrivate --jq '.[] | select(.isPrivate == false) | .name' |
+    grep -v '^nixpkgs-lock$' | sort)
+
+  if [[ -n "$ARG" ]]; then
+    REGEX="^${ARG//\*/.*}$"
+    REPOS=$(echo "$ALL_REPOS" | grep -E "$REGEX" || true)
+  else
+    REPOS=$ALL_REPOS
+  fi
+
+  if [[ -z "$REPOS" ]]; then
+    echo "No repos matched pattern: ${ARG:-<all>}"
+    exit 1
+  fi
 fi
 
 BRANCH="feat/nixpkgs-lock-follows"
 
 export GH_PROMPT_DISABLED=1
 
-read -r -d '' WORKFLOW << WORKFLOW_EOF || true
+read -r -d '' WORKFLOW <<WORKFLOW_EOF || true
 name: Update nixpkgs-lock pin
 
 on:
@@ -92,24 +109,18 @@ declare -a failed=()
 for repo in $REPOS; do
   echo ""
   echo "=== $repo ==="
-  cd "$WORKDIR"
+  cd "$WORKDIR" || exit
 
   if ! git clone --depth 1 "git@github.com:$GITHUB_USER/$repo.git" 2>/dev/null; then
     echo "SKIP: clone failed"
     skipped+=("$repo: clone failed")
     continue
   fi
-  cd "$repo"
+  cd "$repo" || exit
 
   if [[ ! -f flake.nix ]]; then
     echo "SKIP: no flake.nix"
     skipped+=("$repo: no flake.nix")
-    continue
-  fi
-
-  if ! grep -q 'nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11"' flake.nix; then
-    echo "SKIP: no nixpkgs 25.11 direct pin"
-    skipped+=("$repo: no direct nixpkgs pin")
     continue
   fi
 
@@ -136,6 +147,12 @@ for repo in $REPOS; do
     continue
   fi
 
+  if ! grep -q 'nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11"' flake.nix; then
+    echo "SKIP: no nixpkgs 25.11 direct pin"
+    skipped+=("$repo: no direct nixpkgs pin")
+    continue
+  fi
+
   git checkout -b "$BRANCH"
 
   # Add nixpkgs-lock input, flip nixpkgs to follows
@@ -145,7 +162,7 @@ for repo in $REPOS; do
 
   # Add update-pins workflow
   mkdir -p .github/workflows
-  echo "$WORKFLOW" > .github/workflows/update-pins.yml
+  echo "$WORKFLOW" >.github/workflows/update-pins.yml
 
   # Resolve only nixpkgs-lock input, don't touch other inputs
   if ! nix flake lock --update-input nixpkgs-lock 2>/dev/null; then
@@ -170,7 +187,8 @@ Adds daily cron to pull pin updates automatically."
     --repo "$GITHUB_USER/$repo" \
     --head "$BRANCH" \
     --title "Switch to centralized nixpkgs-lock pin" \
-    --body "$(cat <<PR_EOF
+    --body "$(
+      cat <<PR_EOF
 ## Summary
 - Switch \`nixpkgs\` from direct pin to \`nixpkgs.follows = "nixpkgs-lock/nixpkgs"\`
 - Add daily cron workflow (\`update-pins.yml\`) to auto-pull pin updates
@@ -178,7 +196,7 @@ Adds daily cron to pull pin updates automatically."
 ## Context
 Part of centralized nixpkgs version management via [$GITHUB_USER/nixpkgs-lock](https://github.com/$GITHUB_USER/nixpkgs-lock).
 PR_EOF
-)") || true
+    )") || true
 
   if [[ -z "$pr_url" ]]; then
     echo "FAIL: PR creation"
