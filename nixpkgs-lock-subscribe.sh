@@ -183,7 +183,7 @@ Adds daily cron to pull pin updates automatically."
     continue
   fi
 
-  pr_url=$(gh pr create \
+  pr_output=$(gh pr create \
     --repo "$GITHUB_USER/$repo" \
     --head "$BRANCH" \
     --title "Switch to centralized nixpkgs-lock pin" \
@@ -196,17 +196,22 @@ Adds daily cron to pull pin updates automatically."
 ## Context
 Part of centralized nixpkgs version management via [$GITHUB_USER/nixpkgs-lock](https://github.com/$GITHUB_USER/nixpkgs-lock).
 PR_EOF
-    )") || true
+    )" 2>&1) || true
 
-  if [[ -z "$pr_url" ]]; then
+  if [[ "$pr_output" =~ already\ exists ]]; then
+    existing_url=$(echo "$pr_output" | grep -oE 'https://[^ ]+')
+    echo "PR already exists: $existing_url (branch updated)"
+    succeeded+=("$repo (updated existing PR)")
+  elif [[ "$pr_output" =~ ^https:// ]]; then
+    echo "PR: $pr_output"
+    succeeded+=("$repo")
+  else
     echo "FAIL: PR creation"
     failed+=("$repo: PR creation failed")
     continue
   fi
 
-  echo "PR: $pr_url"
   echo "DONE: $repo"
-  succeeded+=("$repo")
 done
 
 echo ""
