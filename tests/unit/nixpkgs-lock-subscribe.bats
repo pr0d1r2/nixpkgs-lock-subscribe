@@ -213,3 +213,25 @@ NIX
     assert_success
     assert_output "nix-bm25s"
 }
+
+@test "existing PR detected as success" {
+    pr_output='a pull request for branch "feat/nixpkgs-lock-follows" into branch "main" already exists:
+https://github.com/testuser/nix-foo/pull/3'
+    run bash -c '[[ "$1" =~ already\ exists ]] && echo "$1" | grep -oE "https://[^ ]+"' -- "$pr_output"
+    assert_success
+    assert_output "https://github.com/testuser/nix-foo/pull/3"
+}
+
+@test "new PR URL detected as success" {
+    pr_output="https://github.com/testuser/nix-foo/pull/4"
+    run bash -c '[[ "$1" =~ ^https:// ]] && echo "new PR"' -- "$pr_output"
+    assert_success
+    assert_output "new PR"
+}
+
+@test "empty pattern reports error" {
+    REPOS=""
+    run bash -c '[[ -z "$1" ]] && echo "No repos matched pattern: test-*"' -- "$REPOS"
+    assert_success
+    assert_output "No repos matched pattern: test-*"
+}
