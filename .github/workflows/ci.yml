@@ -15,18 +15,18 @@ jobs:
       - uses: actions/checkout@v6
       - uses: pr0d1r2/nix-lefthook-ci-action@311740298599dab21f2dc0f83f1d8c974215d197
 
-  build-macos:
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: pr0d1r2/nix-lefthook-ci-action@311740298599dab21f2dc0f83f1d8c974215d197
-
   build-linux-arm:
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    needs: build-linux
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
       - uses: pr0d1r2/nix-lefthook-ci-action@311740298599dab21f2dc0f83f1d8c974215d197
         with:
           extra-platforms: aarch64-linux
+
+  build-macos:
+    needs: build-linux-arm
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pr0d1r2/nix-lefthook-ci-action@311740298599dab21f2dc0f83f1d8c974215d197
