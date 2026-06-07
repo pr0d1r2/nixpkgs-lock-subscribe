@@ -6,6 +6,7 @@ setup() {
 
     TMP="$BATS_TEST_TMPDIR"
     SCRIPT="$BATS_TEST_DIRNAME/../../nixpkgs-lock-subscribe.sh"
+    REPO_OWNER=$(git remote get-url origin | sed -E 's|.*[:/]([^/]+)/.*|\1|')
 
     mkdir -p "$TMP/bin"
 
@@ -164,8 +165,8 @@ NIX
     assert_success
 }
 
-@test "no hardcoded usernames in script" {
-    run grep -cE 'pr0d1r2|prodix|gmail' nixpkgs-lock-subscribe.sh
+@test "no hardcoded usernames in non-comment code" {
+    run bash -c "grep -v '^#' nixpkgs-lock-subscribe.sh | grep -cF '$REPO_OWNER'"
     assert_failure
     assert_output "0"
 }
