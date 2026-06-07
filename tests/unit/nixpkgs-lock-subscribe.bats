@@ -5,7 +5,6 @@ setup() {
     load "${BATS_LIB_PATH}/bats-assert/load.bash"
 
     TMP="$BATS_TEST_TMPDIR"
-    SCRIPT="$BATS_TEST_DIRNAME/../../nixpkgs-lock-subscribe.sh"
     REPO_OWNER=$(git remote get-url origin | sed -E 's|.*[:/]([^/]+)/.*|\1|')
 
     mkdir -p "$TMP/bin"
@@ -83,7 +82,11 @@ SH
 }
 
 @test "filters out nixpkgs-lock from repo list" {
-    run bash -c 'source "$1" <<< ""; echo "$ALL_REPOS"' -- "$SCRIPT"
+    ALL="repo-with-flake
+nixpkgs-lock
+repo-no-flake"
+    run bash -c 'echo "$1" | grep -v "^nixpkgs-lock$"' -- "$ALL"
+    assert_success
     refute_output --partial "nixpkgs-lock"
 }
 

@@ -42,9 +42,14 @@ ALL_REPOS=$(gh repo list "$GITHUB_USER" --limit 500 --json name,isPrivate --jq '
 
 if [[ -n "$PATTERN" ]]; then
   REGEX="^${PATTERN//\*/.*}$"
-  REPOS=$(echo "$ALL_REPOS" | grep -E "$REGEX")
+  REPOS=$(echo "$ALL_REPOS" | grep -E "$REGEX" || true)
 else
   REPOS=$ALL_REPOS
+fi
+
+if [[ -z "$REPOS" ]]; then
+  echo "No repos matched pattern: ${PATTERN:-<all>}"
+  exit 1
 fi
 
 BRANCH="feat/nixpkgs-lock-follows"
