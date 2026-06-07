@@ -185,3 +185,31 @@ NIX
     assert_failure
     assert_output "0"
 }
+
+@test "URL arg extracts repo name" {
+    ARG="https://github.com/testuser/nix-bm25s"
+    run bash -c '[[ "$1" =~ ^https://github\.com/([^/]+)/([^/]+)/?$ ]] && echo "${BASH_REMATCH[2]}"' -- "$ARG"
+    assert_success
+    assert_output "nix-bm25s"
+}
+
+@test "URL arg extracts owner" {
+    ARG="https://github.com/testuser/nix-bm25s"
+    run bash -c '[[ "$1" =~ ^https://github\.com/([^/]+)/([^/]+)/?$ ]] && echo "${BASH_REMATCH[1]}"' -- "$ARG"
+    assert_success
+    assert_output "testuser"
+}
+
+@test "URL arg rejects wrong owner" {
+    ARG="https://github.com/otheruser/nix-bm25s"
+    run bash -c '[[ "$1" =~ ^https://github\.com/([^/]+)/([^/]+)/?$ ]] && [[ "${BASH_REMATCH[1]}" != "testuser" ]] && echo "owner mismatch"' -- "$ARG"
+    assert_success
+    assert_output "owner mismatch"
+}
+
+@test "URL with trailing slash works" {
+    ARG="https://github.com/testuser/nix-bm25s/"
+    run bash -c '[[ "$1" =~ ^https://github\.com/([^/]+)/([^/]+)/?$ ]] && echo "${BASH_REMATCH[2]}"' -- "$ARG"
+    assert_success
+    assert_output "nix-bm25s"
+}

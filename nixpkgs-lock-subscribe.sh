@@ -24,9 +24,9 @@
 #   - SSH access to GitHub repos (git@github.com:...)
 #
 # Usage:
-#   nix run github:pr0d1r2/nixpkgs-lock-subscribe              # all public repos
-#   nix run github:pr0d1r2/nixpkgs-lock-subscribe -- 'nix-*'   # only nix-* repos
-#   nix run github:pr0d1r2/nixpkgs-lock-subscribe -- 'nix-lefthook-*'  # subset
+#   nix run github:pr0d1r2/nixpkgs-lock-subscribe                                        # all public repos
+#   nix run github:pr0d1r2/nixpkgs-lock-subscribe -- 'nix-*'                              # only nix-* repos
+#   nix run github:pr0d1r2/nixpkgs-lock-subscribe -- https://github.com/pr0d1r2/nix-bm25s # single repo
 #
 
 GITHUB_USER=$(gh api /user --jq .login)
@@ -36,20 +36,31 @@ GIT_EMAIL=$(git config user.email)
 WORKDIR=$(mktemp -d)
 trap 'echo "Workdir: $WORKDIR (not cleaned up for inspection)"' EXIT
 
-PATTERN=${1:-}
-ALL_REPOS=$(gh repo list "$GITHUB_USER" --limit 500 --json name,isPrivate --jq '.[] | select(.isPrivate == false) | .name' |
-  grep -v '^nixpkgs-lock$' | sort)
+ARG=${1:-}
 
-if [[ -n "$PATTERN" ]]; then
-  REGEX="^${PATTERN//\*/.*}$"
-  REPOS=$(echo "$ALL_REPOS" | grep -E "$REGEX" || true)
+if [[ "$ARG" =~ ^https://github\.com/([^/]+)/([^/]+)/?$ ]]; then
+  URL_OWNER="${BASH_REMATCH[1]}"
+  URL_REPO="${BASH_REMATCH[2]}"
+  if [[ "$URL_OWNER" != "$GITHUB_USER" ]]; then
+    echo "ERROR: repo owner '$URL_OWNER' does not match authenticated user '$GITHUB_USER'"
+    exit 1
+  fi
+  REPOS="$URL_REPO"
 else
-  REPOS=$ALL_REPOS
-fi
+  ALL_REPOS=$(gh repo list "$GITHUB_USER" --limit 500 --json name,isPrivate --jq '.[] | select(.isPrivate == false) | .name' |
+    grep -v '^nixpkgs-lock$' | sort)
 
-if [[ -z "$REPOS" ]]; then
-  echo "No repos matched pattern: ${PATTERN:-<all>}"
-  exit 1
+  if [[ -n "$ARG" ]]; then
+    REGEX="^${ARG//\*/.*}$"
+    REPOS=$(echo "$ALL_REPOS" | grep -E "$REGEX" || true)
+  else
+    REPOS=$ALL_REPOS
+  fi
+
+  if [[ -z "$REPOS" ]]; then
+    echo "No repos matched pattern: ${ARG:-<all>}"
+    exit 1
+  fi
 fi
 
 BRANCH="feat/nixpkgs-lock-follows"

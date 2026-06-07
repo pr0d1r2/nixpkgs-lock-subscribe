@@ -23,8 +23,8 @@ nix run github:pr0d1r2/nixpkgs-lock-subscribe
 # Only repos matching a glob
 nix run github:pr0d1r2/nixpkgs-lock-subscribe -- 'nix-*'
 
-# Narrower subset
-nix run github:pr0d1r2/nixpkgs-lock-subscribe -- 'nix-lefthook-*'
+# Single repo by URL
+nix run github:pr0d1r2/nixpkgs-lock-subscribe -- https://github.com/pr0d1r2/nix-bm25s
 ```
 
 ## Prerequisites
