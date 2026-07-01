@@ -56,7 +56,7 @@ CLI tool — subscribe nix flake repos to centralized nixpkgs pin via nixpkgs-lo
 | T3 | x | cron fix mode — detect drift in already-subscribed repos, PR to correct | V3,V4,I.cron |
 | T4 | x | detect nixpkgs channel from nixpkgs-lock `flake.nix` instead of hardcode | C9,V9 |
 | T5 | x | CLI: single repo URL (validates owner matches authenticated user) | I.cli.url,V8 |
-| T5b | . | CLI: `--help` | I.cli.help |
+| T5b | x | CLI: `--help` | I.cli.help |
 | T6 | x | CLI: glob pattern as positional arg | I.cli.glob |
 | T7 | x | zero config — derive owner/email from gh/git | C6,V1 |
 | T8 | x | cross-platform — GNU sed via nix, no OS-specific commands | C5,V2,V6 |

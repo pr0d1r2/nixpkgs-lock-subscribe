@@ -29,6 +29,24 @@
 #   nix run github:pr0d1r2/nixpkgs-lock-subscribe -- https://github.com/pr0d1r2/nix-bm25s # single repo
 #
 
+if [[ "${1:-}" == "--help" ]]; then
+  cat <<'EOF'
+Usage: nixpkgs-lock-subscribe [OPTION | PATTERN | URL]
+
+Subscribe nix flake repos to centralized nixpkgs pin via nixpkgs-lock.
+
+Arguments:
+  (none)        Subscribe all public repos with direct nixpkgs pin
+  PATTERN       Subscribe repos matching glob pattern (e.g. 'nix-*')
+  URL           Subscribe a single repo by GitHub URL
+                (e.g. https://github.com/OWNER/REPO)
+
+Options:
+  --help        Show this help message and exit
+EOF
+  exit 0
+fi
+
 GITHUB_USER=$(gh api /user --jq .login)
 GIT_NAME=$(git config user.name)
 GIT_EMAIL=$(git config user.email)
