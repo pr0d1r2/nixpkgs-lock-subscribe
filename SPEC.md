@@ -25,7 +25,7 @@ CLI tool — subscribe nix flake repos to centralized nixpkgs pin via nixpkgs-lo
 - I.cli.all: `nix run .` → subscribe all public repos with direct nixpkgs pin
 - I.cli.glob: `nix run . -- 'nix-*'` → subscribe matching repos
 - I.cli.url: `nix run . -- https://github.com/owner/repo` → subscribe single repo
-- I.cli.dry: `--dry-run` → show what would change, no PRs (§T.T10, not yet)
+- I.cli.dry: `--dry-run` → show what would change, no PRs (§T.T10)
 - I.cli.status: `--status` → subscription state per repo (§T.T11, not yet)
 - I.cli.help: `--help` → usage (§T.T5b)
 - I.workflow: `.github/workflows/update-pins.yml` — installed in target repos
@@ -40,7 +40,7 @@ CLI tool — subscribe nix flake repos to centralized nixpkgs pin via nixpkgs-lo
 - V4: re-run on subscribed repo with wrong cron → PR to fix cron only
 - V5: ⊥ PR created if `nix flake lock` fails — report & continue
 - V6: ⊥ OS-specific commands (`open -a Safari`, `xdg-open`)
-- V7: `--dry-run` ! produce zero side effects (§T.T10, not yet)
+- V7: `--dry-run` ! produce zero side effects (§T.T10)
 - V8: single repo URL mode ! skip "list all repos" API call
 - V11: re-run with existing PR → report as succeeded, not failed
 - V12: empty repo match → explicit error message, not silent exit
