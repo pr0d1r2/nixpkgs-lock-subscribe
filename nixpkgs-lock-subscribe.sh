@@ -29,9 +29,13 @@
 #   nix run github:pr0d1r2/nixpkgs-lock-subscribe -- https://github.com/pr0d1r2/nix-bm25s # single repo
 #
 
-if [[ "${1:-}" == "--help" ]]; then
-  cat <<'EOF'
-Usage: nixpkgs-lock-subscribe [OPTION | PATTERN | URL]
+DRY_RUN=0
+POSITIONAL=()
+for arg in "$@"; do
+  case "$arg" in
+    --help)
+      cat <<'EOF'
+Usage: nixpkgs-lock-subscribe [OPTIONS] [PATTERN | URL]
 
 Subscribe nix flake repos to centralized nixpkgs pin via nixpkgs-lock.
 
@@ -42,10 +46,19 @@ Arguments:
                 (e.g. https://github.com/OWNER/REPO)
 
 Options:
+  --dry-run     Show what would change without making any modifications
   --help        Show this help message and exit
 EOF
-  exit 0
-fi
+      exit 0
+      ;;
+    --dry-run)
+      DRY_RUN=1
+      ;;
+    *)
+      POSITIONAL+=("$arg")
+      ;;
+  esac
+done
 
 GITHUB_USER=$(gh api /user --jq .login)
 GIT_NAME=$(git config user.name)
@@ -63,7 +76,7 @@ fi
 WORKDIR=$(mktemp -d)
 trap 'echo "Workdir: $WORKDIR (not cleaned up for inspection)"' EXIT
 
-ARG=${1:-}
+ARG=${POSITIONAL[0]:-}
 
 if [[ "$ARG" =~ ^https://github\.com/([^/]+)/([^/]+)/?$ ]]; then
   URL_OWNER="${BASH_REMATCH[1]}"
@@ -155,18 +168,23 @@ for repo in $REPOS; do
     PINS_WORKFLOW=".github/workflows/update-pins.yml"
     if [[ -f "$PINS_WORKFLOW" ]] && ! grep -q "cron: '30 3 \* \* \*'" "$PINS_WORKFLOW"; then
       current_cron=$(grep 'cron:' "$PINS_WORKFLOW" | head -1 | xargs)
-      echo "FIX CRON: $repo ($current_cron -> '30 3 * * *')"
-      git checkout -b "$BRANCH"
-      sed -i "s|cron: '.*'|cron: '30 3 * * *'|" "$PINS_WORKFLOW"
-      git add "$PINS_WORKFLOW"
-      git commit -m "fix: update nixpkgs-lock pin cron to 3:30 UTC"
-      git push -u --force origin "$BRANCH"
-      gh pr create \
-        --repo "$GITHUB_USER/$repo" \
-        --head "$BRANCH" \
-        --title "Fix nixpkgs-lock pin update cron schedule" \
-        --body "Update cron from $current_cron to 3:30 UTC (5:30 AM CEST)." || true
-      succeeded+=("$repo (cron fix)")
+      if [[ $DRY_RUN -eq 1 ]]; then
+        echo "DRY RUN: would fix cron for $repo ($current_cron -> '30 3 * * *')"
+        succeeded+=("$repo (would fix cron)")
+      else
+        echo "FIX CRON: $repo ($current_cron -> '30 3 * * *')"
+        git checkout -b "$BRANCH"
+        sed -i "s|cron: '.*'|cron: '30 3 * * *'|" "$PINS_WORKFLOW"
+        git add "$PINS_WORKFLOW"
+        git commit -m "fix: update nixpkgs-lock pin cron to 3:30 UTC"
+        git push -u --force origin "$BRANCH"
+        gh pr create \
+          --repo "$GITHUB_USER/$repo" \
+          --head "$BRANCH" \
+          --title "Fix nixpkgs-lock pin update cron schedule" \
+          --body "Update cron from $current_cron to 3:30 UTC (5:30 AM CEST)." || true
+        succeeded+=("$repo (cron fix)")
+      fi
     else
       echo "SKIP: already converted, cron OK"
       skipped+=("$repo: already converted")
@@ -180,42 +198,46 @@ for repo in $REPOS; do
     continue
   fi
 
-  git checkout -b "$BRANCH"
+  if [[ $DRY_RUN -eq 1 ]]; then
+    echo "DRY RUN: would subscribe $repo"
+    succeeded+=("$repo (would subscribe)")
+  else
+    git checkout -b "$BRANCH"
 
-  # Add nixpkgs-lock input, flip nixpkgs to follows
-  sed -i \
-    "s|nixpkgs.url = \"github:NixOS/nixpkgs/$NIXPKGS_CHANNEL\";|nixpkgs-lock.url = \"github:$GITHUB_USER/nixpkgs-lock\";\n    nixpkgs.follows = \"nixpkgs-lock/nixpkgs\";|" \
-    flake.nix
+    # Add nixpkgs-lock input, flip nixpkgs to follows
+    sed -i \
+      "s|nixpkgs.url = \"github:NixOS/nixpkgs/$NIXPKGS_CHANNEL\";|nixpkgs-lock.url = \"github:$GITHUB_USER/nixpkgs-lock\";\n    nixpkgs.follows = \"nixpkgs-lock/nixpkgs\";|" \
+      flake.nix
 
-  # Add update-pins workflow
-  mkdir -p .github/workflows
-  echo "$WORKFLOW" >.github/workflows/update-pins.yml
+    # Add update-pins workflow
+    mkdir -p .github/workflows
+    echo "$WORKFLOW" >.github/workflows/update-pins.yml
 
-  # Resolve only nixpkgs-lock input, don't touch other inputs
-  if ! nix flake lock --update-input nixpkgs-lock 2>/dev/null; then
-    echo "FAIL: nix flake lock"
-    failed+=("$repo: nix flake lock failed")
-    continue
-  fi
+    # Resolve only nixpkgs-lock input, don't touch other inputs
+    if ! nix flake lock --update-input nixpkgs-lock 2>/dev/null; then
+      echo "FAIL: nix flake lock"
+      failed+=("$repo: nix flake lock failed")
+      continue
+    fi
 
-  git add -A
-  git commit -m "chore: switch nixpkgs pin to nixpkgs-lock follows
+    git add -A
+    git commit -m "chore: switch nixpkgs pin to nixpkgs-lock follows
 
 Uses $GITHUB_USER/nixpkgs-lock as centralized nixpkgs pin.
 Adds daily cron to pull pin updates automatically."
 
-  if ! git push -u --force origin "$BRANCH"; then
-    echo "FAIL: push"
-    failed+=("$repo: push failed")
-    continue
-  fi
+    if ! git push -u --force origin "$BRANCH"; then
+      echo "FAIL: push"
+      failed+=("$repo: push failed")
+      continue
+    fi
 
-  pr_output=$(gh pr create \
-    --repo "$GITHUB_USER/$repo" \
-    --head "$BRANCH" \
-    --title "Switch to centralized nixpkgs-lock pin" \
-    --body "$(
-      cat <<PR_EOF
+    pr_output=$(gh pr create \
+      --repo "$GITHUB_USER/$repo" \
+      --head "$BRANCH" \
+      --title "Switch to centralized nixpkgs-lock pin" \
+      --body "$(
+        cat <<PR_EOF
 ## Summary
 - Switch \`nixpkgs\` from direct pin to \`nixpkgs.follows = "nixpkgs-lock/nixpkgs"\`
 - Add daily cron workflow (\`update-pins.yml\`) to auto-pull pin updates
@@ -223,26 +245,31 @@ Adds daily cron to pull pin updates automatically."
 ## Context
 Part of centralized nixpkgs version management via [$GITHUB_USER/nixpkgs-lock](https://github.com/$GITHUB_USER/nixpkgs-lock).
 PR_EOF
-    )" 2>&1) || true
+      )" 2>&1) || true
 
-  if [[ "$pr_output" =~ already\ exists ]]; then
-    existing_url=$(echo "$pr_output" | grep -oE 'https://[^ ]+')
-    echo "PR already exists: $existing_url (branch updated)"
-    succeeded+=("$repo (updated existing PR)")
-  elif [[ "$pr_output" =~ ^https:// ]]; then
-    echo "PR: $pr_output"
-    succeeded+=("$repo")
-  else
-    echo "FAIL: PR creation"
-    failed+=("$repo: PR creation failed")
-    continue
+    if [[ "$pr_output" =~ already\ exists ]]; then
+      existing_url=$(echo "$pr_output" | grep -oE 'https://[^ ]+')
+      echo "PR already exists: $existing_url (branch updated)"
+      succeeded+=("$repo (updated existing PR)")
+    elif [[ "$pr_output" =~ ^https:// ]]; then
+      echo "PR: $pr_output"
+      succeeded+=("$repo")
+    else
+      echo "FAIL: PR creation"
+      failed+=("$repo: PR creation failed")
+      continue
+    fi
+
+    echo "DONE: $repo"
   fi
-
-  echo "DONE: $repo"
 done
 
 echo ""
-echo "========== SUMMARY =========="
+if [[ $DRY_RUN -eq 1 ]]; then
+  echo "========== DRY RUN SUMMARY =========="
+else
+  echo "========== SUMMARY =========="
+fi
 echo "Succeeded: ${#succeeded[@]}"
 for r in "${succeeded[@]+"${succeeded[@]}"}"; do echo "  ✓ $r"; done
 echo "Skipped: ${#skipped[@]}"
