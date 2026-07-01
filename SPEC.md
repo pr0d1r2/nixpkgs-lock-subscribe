@@ -14,7 +14,7 @@ CLI tool — subscribe nix flake repos to centralized nixpkgs pin via nixpkgs-lo
 - C6: Zero config — derives owner/email from `gh api /user` & `git config`
 - C7: Pull model — installs cron in target repo, no cross-repo auth
 - C8: MIT license
-- C9: Pin pattern currently hardcoded to `nixos-25.11` (→ §T.T4 for future)
+- C9: Pin pattern derived from nixpkgs-lock `flake.nix` (T4)
 - C10: Workflow template embedded — `update-pins.yml` with `peter-evans/create-pull-request`
 - C11: CI via nix-lefthook-ci-action — serial chain: linux → linux-arm → macos
 - C12: Lefthook shell linting — shellcheck, shfmt, bats-unit, bats-parse
@@ -44,7 +44,7 @@ CLI tool — subscribe nix flake repos to centralized nixpkgs pin via nixpkgs-lo
 - V8: single repo URL mode ! skip "list all repos" API call
 - V11: re-run with existing PR → report as succeeded, not failed
 - V12: empty repo match → explicit error message, not silent exit
-- V9: nixpkgs channel pattern derived from nixpkgs-lock `flake.nix` (§T.T4, not yet — currently hardcoded)
+- V9: nixpkgs channel pattern derived from nixpkgs-lock `flake.nix`
 - V10: ∀ target repo → `nix flake check --no-build` passes before PR
 
 ## §T TASKS
