@@ -30,6 +30,7 @@
 #
 
 DRY_RUN=0
+STATUS_MODE=0
 POSITIONAL=()
 for arg in "$@"; do
   case "$arg" in
@@ -47,12 +48,16 @@ Arguments:
 
 Options:
   --dry-run     Show what would change without making any modifications
+  --status      Show subscription state per repo
   --help        Show this help message and exit
 EOF
       exit 0
       ;;
     --dry-run)
       DRY_RUN=1
+      ;;
+    --status)
+      STATUS_MODE=1
       ;;
     *)
       POSITIONAL+=("$arg")
@@ -152,15 +157,40 @@ for repo in $REPOS; do
   cd "$WORKDIR" || exit
 
   if ! git clone --depth 1 "git@github.com:$GITHUB_USER/$repo.git" 2>/dev/null; then
-    echo "SKIP: clone failed"
-    skipped+=("$repo: clone failed")
+    if [[ $STATUS_MODE -eq 1 ]]; then
+      echo "$repo: clone-failed"
+    else
+      echo "SKIP: clone failed"
+      skipped+=("$repo: clone failed")
+    fi
     continue
   fi
   cd "$repo" || exit
 
   if [[ ! -f flake.nix ]]; then
-    echo "SKIP: no flake.nix"
-    skipped+=("$repo: no flake.nix")
+    if [[ $STATUS_MODE -eq 1 ]]; then
+      echo "$repo: no-flake"
+    else
+      echo "SKIP: no flake.nix"
+      skipped+=("$repo: no flake.nix")
+    fi
+    continue
+  fi
+
+  if [[ $STATUS_MODE -eq 1 ]]; then
+    if grep -q 'nixpkgs-lock' flake.nix; then
+      PINS_WORKFLOW=".github/workflows/update-pins.yml"
+      if [[ -f "$PINS_WORKFLOW" ]] && ! grep -q "cron: '30 3 \* \* \*'" "$PINS_WORKFLOW"; then
+        current_cron=$(grep 'cron:' "$PINS_WORKFLOW" | head -1 | xargs)
+        echo "$repo: cron-drift ($current_cron)"
+      else
+        echo "$repo: subscribed"
+      fi
+    elif grep -q "nixpkgs.url = \"github:NixOS/nixpkgs/$NIXPKGS_CHANNEL\"" flake.nix; then
+      echo "$repo: eligible"
+    else
+      echo "$repo: no-nixpkgs-pin"
+    fi
     continue
   fi
 
@@ -264,16 +294,18 @@ PR_EOF
   fi
 done
 
-echo ""
-if [[ $DRY_RUN -eq 1 ]]; then
-  echo "========== DRY RUN SUMMARY =========="
-else
-  echo "========== SUMMARY =========="
+if [[ $STATUS_MODE -ne 1 ]]; then
+  echo ""
+  if [[ $DRY_RUN -eq 1 ]]; then
+    echo "========== DRY RUN SUMMARY =========="
+  else
+    echo "========== SUMMARY =========="
+  fi
+  echo "Succeeded: ${#succeeded[@]}"
+  for r in "${succeeded[@]+"${succeeded[@]}"}"; do echo "  ✓ $r"; done
+  echo "Skipped: ${#skipped[@]}"
+  for r in "${skipped[@]+"${skipped[@]}"}"; do echo "  - $r"; done
+  echo "Failed: ${#failed[@]}"
+  for r in "${failed[@]+"${failed[@]}"}"; do echo "  ✗ $r"; done
+  echo "Workdir: $WORKDIR"
 fi
-echo "Succeeded: ${#succeeded[@]}"
-for r in "${succeeded[@]+"${succeeded[@]}"}"; do echo "  ✓ $r"; done
-echo "Skipped: ${#skipped[@]}"
-for r in "${skipped[@]+"${skipped[@]}"}"; do echo "  - $r"; done
-echo "Failed: ${#failed[@]}"
-for r in "${failed[@]+"${failed[@]}"}"; do echo "  ✗ $r"; done
-echo "Workdir: $WORKDIR"

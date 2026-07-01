@@ -26,7 +26,7 @@ CLI tool — subscribe nix flake repos to centralized nixpkgs pin via nixpkgs-lo
 - I.cli.glob: `nix run . -- 'nix-*'` → subscribe matching repos
 - I.cli.url: `nix run . -- https://github.com/owner/repo` → subscribe single repo
 - I.cli.dry: `--dry-run` → show what would change, no PRs (§T.T10)
-- I.cli.status: `--status` → subscription state per repo (§T.T11, not yet)
+- I.cli.status: `--status` → subscription state per repo (§T.T11)
 - I.cli.help: `--help` → usage (§T.T5b)
 - I.workflow: `.github/workflows/update-pins.yml` — installed in target repos
 - I.branch: `feat/nixpkgs-lock-follows` — PR branch in target repos
@@ -62,7 +62,7 @@ CLI tool — subscribe nix flake repos to centralized nixpkgs pin via nixpkgs-lo
 | T8 | x | cross-platform — GNU sed via nix, no OS-specific commands | C5,V2,V6 |
 | T9 | x | CI — nix-lefthook-ci-action on 3 platforms | C11 |
 | T10 | x | `--dry-run` mode | I.cli.dry,V7 |
-| T11 | . | `--status` mode — show subscription state per repo | I.cli.status |
+| T11 | x | `--status` mode — show subscription state per repo | I.cli.status |
 | T12 | x | bats unit tests for current script logic | C12 |
 | T13 | x | lefthook config — shellcheck, shfmt, bats, yamllint, etc. | C12 |
 | T14 | . | error recovery — partial failure resume, no `--force` push | V5 |
