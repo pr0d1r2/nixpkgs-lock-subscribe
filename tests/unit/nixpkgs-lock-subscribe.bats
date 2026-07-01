@@ -199,6 +199,7 @@ NIX
 }
 
 @test "no hardcoded usernames in non-comment code" {
+    [[ -n "$REPO_OWNER" ]] || skip "no origin remote"
     run bash -c "grep -v '^#' nixpkgs-lock-subscribe.sh | grep -cF '$REPO_OWNER'"
     assert_failure
     assert_output "0"
@@ -477,4 +478,176 @@ SH
     assert_success
     assert_output --partial "DRY RUN: would fix cron"
     refute_output --partial "ERROR"
+}
+
+@test "--help shows --status option" {
+    run bash nixpkgs-lock-subscribe.sh --help
+    assert_success
+    assert_output --partial "--status"
+}
+
+@test "--status parses with positional arg" {
+    STATUS_MODE=0
+    POSITIONAL=()
+    for arg in --status 'nix-*'; do
+        case "$arg" in
+            --status) STATUS_MODE=1 ;;
+            *) POSITIONAL+=("$arg") ;;
+        esac
+    done
+    run bash -c 'echo "$1 $2"' -- "$STATUS_MODE" "${POSITIONAL[0]:-}"
+    assert_success
+    assert_output "1 nix-*"
+}
+
+@test "--status shows subscribed for converted repo" {
+    run bash nixpkgs-lock-subscribe.sh --status
+    assert_success
+    assert_output --partial "repo-already-subscribed: subscribed"
+}
+
+@test "--status shows eligible for direct pin repo" {
+    run bash nixpkgs-lock-subscribe.sh --status
+    assert_success
+    assert_output --partial "repo-with-flake: eligible"
+}
+
+@test "--status shows no-flake for repo without flake.nix" {
+    run bash nixpkgs-lock-subscribe.sh --status
+    assert_success
+    assert_output --partial "repo-no-flake: no-flake"
+}
+
+@test "--status does not show SUMMARY" {
+    run bash nixpkgs-lock-subscribe.sh --status
+    assert_success
+    refute_output --partial "SUMMARY"
+}
+
+@test "--status does not call git push or gh pr create" {
+    cat > "$TMP/bin/git" <<'SH'
+#!/usr/bin/env bash
+case "$1" in
+    config)
+        case "$2" in
+            user.name) echo "Test User" ;;
+            user.email) echo "test@example.com" ;;
+        esac
+        ;;
+    clone)
+        repo_name="${4##*/}"
+        repo_name="${repo_name%.git}"
+        mkdir -p "$repo_name"
+        cat > "$repo_name/flake.nix" <<'NIX'
+{
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
+  };
+}
+NIX
+        ;;
+    push)
+        echo "ERROR: git push called in status mode" >&2
+        exit 1
+        ;;
+    *)
+        command git "$@"
+        ;;
+esac
+SH
+    chmod +x "$TMP/bin/git"
+    cat > "$TMP/bin/gh" <<SH
+#!/usr/bin/env bash
+case "\$*" in
+    "api /user --jq .login")
+        echo "testuser"
+        ;;
+    *"repos/testuser/nixpkgs-lock/contents/flake.nix"*)
+        echo "$NIXPKGS_LOCK_FLAKE_B64"
+        ;;
+    *"repo list"*)
+        echo "repo-with-flake"
+        ;;
+    *"pr create"*)
+        echo "ERROR: gh pr create called in status mode" >&2
+        exit 1
+        ;;
+    *)
+        echo "gh mock: \$*" >&2
+        ;;
+esac
+SH
+    chmod +x "$TMP/bin/gh"
+    run bash nixpkgs-lock-subscribe.sh --status
+    assert_success
+    refute_output --partial "ERROR"
+}
+
+@test "--status shows cron-drift for wrong cron" {
+    cat > "$TMP/bin/git" <<'SH'
+#!/usr/bin/env bash
+case "$1" in
+    config)
+        case "$2" in
+            user.name) echo "Test User" ;;
+            user.email) echo "test@example.com" ;;
+        esac
+        ;;
+    clone)
+        repo_name="${4##*/}"
+        repo_name="${repo_name%.git}"
+        mkdir -p "$repo_name"
+        cat > "$repo_name/flake.nix" <<'NIX'
+{
+  inputs = {
+    nixpkgs-lock.url = "github:testuser/nixpkgs-lock";
+    nixpkgs.follows = "nixpkgs-lock/nixpkgs";
+  };
+}
+NIX
+        mkdir -p "$repo_name/.github/workflows"
+        cat > "$repo_name/.github/workflows/update-pins.yml" <<'YML'
+on:
+  schedule:
+    - cron: '30 6 * * *'
+YML
+        ;;
+    push)
+        echo "ERROR: git push called in status mode" >&2
+        exit 1
+        ;;
+    *)
+        command git "$@"
+        ;;
+esac
+SH
+    chmod +x "$TMP/bin/git"
+    cat > "$TMP/bin/gh" <<SH
+#!/usr/bin/env bash
+case "\$*" in
+    "api /user --jq .login")
+        echo "testuser"
+        ;;
+    *"repos/testuser/nixpkgs-lock/contents/flake.nix"*)
+        echo "$NIXPKGS_LOCK_FLAKE_B64"
+        ;;
+    *"repo list"*)
+        echo "repo-wrong-cron"
+        ;;
+    *)
+        echo "gh mock: \$*" >&2
+        ;;
+esac
+SH
+    chmod +x "$TMP/bin/gh"
+    run bash nixpkgs-lock-subscribe.sh --status
+    assert_success
+    assert_output --partial "cron-drift"
+    refute_output --partial "ERROR"
+}
+
+@test "--status with --help still shows help" {
+    run bash nixpkgs-lock-subscribe.sh --status --help
+    assert_success
+    assert_output --partial "Usage: nixpkgs-lock-subscribe"
 }
