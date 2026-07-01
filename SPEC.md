@@ -27,7 +27,7 @@ CLI tool — subscribe nix flake repos to centralized nixpkgs pin via nixpkgs-lo
 - I.cli.url: `nix run . -- https://github.com/owner/repo` → subscribe single repo
 - I.cli.dry: `--dry-run` → show what would change, no PRs (§T.T10, not yet)
 - I.cli.status: `--status` → subscription state per repo (§T.T11, not yet)
-- I.cli.help: `--help` → usage (§T.T5, not yet)
+- I.cli.help: `--help` → usage (§T.T5b)
 - I.workflow: `.github/workflows/update-pins.yml` — installed in target repos
 - I.branch: `feat/nixpkgs-lock-follows` — PR branch in target repos
 - I.cron: downstream cron `30 3 * * *` (5:30 AM CEST) — 30 min after nixpkgs-lock `0 3`
