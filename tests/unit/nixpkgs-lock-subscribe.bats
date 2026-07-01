@@ -86,6 +86,31 @@ SH
     export PATH="$TMP/bin:$PATH"
 }
 
+@test "--help prints usage" {
+    run bash nixpkgs-lock-subscribe.sh --help
+    assert_success
+    assert_output --partial "Usage: nixpkgs-lock-subscribe"
+}
+
+@test "--help shows available arguments" {
+    run bash nixpkgs-lock-subscribe.sh --help
+    assert_success
+    assert_output --partial "PATTERN"
+    assert_output --partial "URL"
+}
+
+@test "--help exits before API calls" {
+    cat > "$TMP/bin/gh" <<'SH'
+#!/usr/bin/env bash
+echo "ERROR: gh should not be called with --help" >&2
+exit 1
+SH
+    chmod +x "$TMP/bin/gh"
+    run bash nixpkgs-lock-subscribe.sh --help
+    assert_success
+    refute_output --partial "ERROR"
+}
+
 @test "filters out nixpkgs-lock from repo list" {
     ALL="repo-with-flake
 nixpkgs-lock
