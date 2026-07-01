@@ -651,3 +651,141 @@ SH
     assert_success
     assert_output --partial "Usage: nixpkgs-lock-subscribe"
 }
+
+@test "no --force flag in push commands" {
+    run bash -c "grep 'git push' nixpkgs-lock-subscribe.sh | grep -c -- '--force'"
+    assert_failure
+    assert_output "0"
+}
+
+@test "existing PR detected before push on resume" {
+    cat > "$TMP/bin/git" <<'SH'
+#!/usr/bin/env bash
+case "$1" in
+    config)
+        case "$2" in
+            user.name) echo "Test User" ;;
+            user.email) echo "test@example.com" ;;
+        esac
+        ;;
+    clone)
+        repo_name="${4##*/}"
+        repo_name="${repo_name%.git}"
+        mkdir -p "$repo_name"
+        cat > "$repo_name/flake.nix" <<'NIX'
+{
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
+  };
+}
+NIX
+        ;;
+    push)
+        echo "ERROR: git push called during resume" >&2
+        exit 1
+        ;;
+    *)
+        command git "$@"
+        ;;
+esac
+SH
+    chmod +x "$TMP/bin/git"
+    cat > "$TMP/bin/gh" <<SH
+#!/usr/bin/env bash
+case "\$*" in
+    "api /user --jq .login")
+        echo "testuser"
+        ;;
+    *"repos/testuser/nixpkgs-lock/contents/flake.nix"*)
+        echo "$NIXPKGS_LOCK_FLAKE_B64"
+        ;;
+    *"repo list"*)
+        echo "repo-with-flake"
+        ;;
+    *"pr list"*)
+        echo "https://github.com/testuser/repo-with-flake/pull/1"
+        ;;
+    *"pr create"*)
+        echo "ERROR: gh pr create called during resume" >&2
+        exit 1
+        ;;
+    *)
+        echo "gh mock: \$*" >&2
+        ;;
+esac
+SH
+    chmod +x "$TMP/bin/gh"
+    run bash nixpkgs-lock-subscribe.sh
+    assert_success
+    assert_output --partial "PR already exists"
+    refute_output --partial "ERROR"
+}
+
+@test "nix flake lock failure reports and continues" {
+    cat > "$TMP/bin/nix" <<'SH'
+#!/usr/bin/env bash
+exit 1
+SH
+    chmod +x "$TMP/bin/nix"
+    cat > "$TMP/bin/git" <<'SH'
+#!/usr/bin/env bash
+case "$1" in
+    config)
+        case "$2" in
+            user.name) echo "Test User" ;;
+            user.email) echo "test@example.com" ;;
+        esac
+        ;;
+    clone)
+        repo_name="${4##*/}"
+        repo_name="${repo_name%.git}"
+        mkdir -p "$repo_name"
+        cat > "$repo_name/flake.nix" <<'NIX'
+{
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
+  };
+}
+NIX
+        ;;
+    checkout|add|commit)
+        ;;
+    push)
+        echo "ERROR: git push called after nix flake lock failure" >&2
+        exit 1
+        ;;
+    *)
+        command git "$@"
+        ;;
+esac
+SH
+    chmod +x "$TMP/bin/git"
+    cat > "$TMP/bin/gh" <<SH
+#!/usr/bin/env bash
+case "\$*" in
+    "api /user --jq .login")
+        echo "testuser"
+        ;;
+    *"repos/testuser/nixpkgs-lock/contents/flake.nix"*)
+        echo "$NIXPKGS_LOCK_FLAKE_B64"
+        ;;
+    *"repo list"*)
+        echo "repo-with-flake"
+        ;;
+    *"pr list"*)
+        ;;
+    *"pr create"*)
+        echo "ERROR: gh pr create called after nix flake lock failure" >&2
+        exit 1
+        ;;
+    *)
+        echo "gh mock: \$*" >&2
+        ;;
+esac
+SH
+    chmod +x "$TMP/bin/gh"
+    run bash nixpkgs-lock-subscribe.sh
+    assert_success
+    assert_output --partial "FAIL: nix flake lock"
+    refute_output --partial "ERROR"
+}
