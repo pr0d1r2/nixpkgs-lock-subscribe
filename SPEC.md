@@ -54,7 +54,7 @@ CLI tool — subscribe nix flake repos to centralized nixpkgs pin via nixpkgs-lo
 | T1 | x | `flake.nix` with bash script as `apps.default` via `writeShellApplication` | C1,C2 |
 | T2 | x | core subscribe logic — rewrite flake.nix, install update-pins.yml, PR | C7,C10,I.workflow |
 | T3 | x | cron fix mode — detect drift in already-subscribed repos, PR to correct | V3,V4,I.cron |
-| T4 | . | detect nixpkgs channel from nixpkgs-lock `flake.nix` instead of hardcode | C9,V9 |
+| T4 | x | detect nixpkgs channel from nixpkgs-lock `flake.nix` instead of hardcode | C9,V9 |
 | T5 | x | CLI: single repo URL (validates owner matches authenticated user) | I.cli.url,V8 |
 | T5b | . | CLI: `--help` | I.cli.help |
 | T6 | x | CLI: glob pattern as positional arg | I.cli.glob |

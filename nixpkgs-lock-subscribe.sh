@@ -6,7 +6,7 @@
 # GitHub user and performs one of two actions:
 #
 #   1. Fresh conversion: If a repo pins nixpkgs directly via
-#      nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11", rewrites it to
+#      nixpkgs.url = "github:NixOS/nixpkgs/<channel>", rewrites it to
 #      follow nixpkgs-lock (nixpkgs.follows = "nixpkgs-lock/nixpkgs") and
 #      adds a daily cron workflow (update-pins.yml) to auto-pull pin updates.
 #
@@ -32,6 +32,15 @@
 GITHUB_USER=$(gh api /user --jq .login)
 GIT_NAME=$(git config user.name)
 GIT_EMAIL=$(git config user.email)
+
+NIXPKGS_CHANNEL=$(gh api "repos/$GITHUB_USER/nixpkgs-lock/contents/flake.nix" --jq '.content' |
+  base64 -d |
+  sed -n 's/.*nixpkgs\.url = "github:NixOS\/nixpkgs\/\([^"]*\)".*/\1/p')
+
+if [[ -z "$NIXPKGS_CHANNEL" ]]; then
+  echo "ERROR: could not detect nixpkgs channel from $GITHUB_USER/nixpkgs-lock flake.nix"
+  exit 1
+fi
 
 WORKDIR=$(mktemp -d)
 trap 'echo "Workdir: $WORKDIR (not cleaned up for inspection)"' EXIT
@@ -147,8 +156,8 @@ for repo in $REPOS; do
     continue
   fi
 
-  if ! grep -q 'nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11"' flake.nix; then
-    echo "SKIP: no nixpkgs 25.11 direct pin"
+  if ! grep -q "nixpkgs.url = \"github:NixOS/nixpkgs/$NIXPKGS_CHANNEL\"" flake.nix; then
+    echo "SKIP: no nixpkgs $NIXPKGS_CHANNEL direct pin"
     skipped+=("$repo: no direct nixpkgs pin")
     continue
   fi
@@ -157,7 +166,7 @@ for repo in $REPOS; do
 
   # Add nixpkgs-lock input, flip nixpkgs to follows
   sed -i \
-    "s|nixpkgs.url = \"github:NixOS/nixpkgs/nixos-25.11\";|nixpkgs-lock.url = \"github:$GITHUB_USER/nixpkgs-lock\";\n    nixpkgs.follows = \"nixpkgs-lock/nixpkgs\";|" \
+    "s|nixpkgs.url = \"github:NixOS/nixpkgs/$NIXPKGS_CHANNEL\";|nixpkgs-lock.url = \"github:$GITHUB_USER/nixpkgs-lock\";\n    nixpkgs.follows = \"nixpkgs-lock/nixpkgs\";|" \
     flake.nix
 
   # Add update-pins workflow
