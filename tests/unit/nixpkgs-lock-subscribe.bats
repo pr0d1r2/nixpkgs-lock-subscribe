@@ -9,11 +9,16 @@ setup() {
 
     mkdir -p "$TMP/bin"
 
-    cat > "$TMP/bin/gh" <<'SH'
+    NIXPKGS_LOCK_FLAKE_B64=$(printf '{\n  inputs = {\n    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";\n  };\n}\n' | base64 -w0)
+
+    cat > "$TMP/bin/gh" <<SH
 #!/usr/bin/env bash
-case "$*" in
+case "\$*" in
     "api /user --jq .login")
         echo "testuser"
+        ;;
+    *"repos/testuser/nixpkgs-lock/contents/flake.nix"*)
+        echo "$NIXPKGS_LOCK_FLAKE_B64"
         ;;
     *"repo list"*)
         echo "repo-with-flake"
@@ -22,7 +27,7 @@ case "$*" in
         echo "nixpkgs-lock"
         ;;
     *)
-        echo "gh mock: $*" >&2
+        echo "gh mock: \$*" >&2
         ;;
 esac
 SH
@@ -234,4 +239,51 @@ https://github.com/testuser/nix-foo/pull/3'
     run bash -c '[[ -z "$1" ]] && echo "No repos matched pattern: test-*"' -- "$REPOS"
     assert_success
     assert_output "No repos matched pattern: test-*"
+}
+
+@test "detects nixpkgs channel from nixpkgs-lock flake.nix" {
+    run bash -c 'gh api "repos/testuser/nixpkgs-lock/contents/flake.nix" --jq ".content" | base64 -d | sed -n '\''s/.*nixpkgs\.url = "github:NixOS\/nixpkgs\/\([^"]*\)".*/\1/p'\'''
+    assert_success
+    assert_output "nixos-25.11"
+}
+
+@test "channel detection fails on empty response" {
+    cat > "$TMP/bin/gh-empty" <<'SH'
+#!/usr/bin/env bash
+echo '{"content":""}'
+SH
+    chmod +x "$TMP/bin/gh-empty"
+    run bash -c '"$1/bin/gh-empty" api x --jq ".content" | base64 -d 2>/dev/null | sed -n '\''s/.*nixpkgs\.url = "github:NixOS\/nixpkgs\/\([^"]*\)".*/\1/p'\''' -- "$TMP"
+    assert_success
+    assert_output ""
+}
+
+@test "detected channel used in direct pin check" {
+    NIXPKGS_CHANNEL="nixos-25.11"
+    mkdir -p "$TMP/workdir"
+    cat > "$TMP/workdir/flake.nix" <<'NIX'
+{
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
+  };
+}
+NIX
+    run bash -c 'grep -q "nixpkgs.url = \"github:NixOS/nixpkgs/$1\"" "$2/flake.nix" && echo "eligible"' -- "$NIXPKGS_CHANNEL" "$TMP/workdir"
+    assert_success
+    assert_output "eligible"
+}
+
+@test "detected channel rejects mismatched pin" {
+    NIXPKGS_CHANNEL="nixos-25.11"
+    mkdir -p "$TMP/workdir"
+    cat > "$TMP/workdir/flake.nix" <<'NIX'
+{
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
+  };
+}
+NIX
+    run bash -c '! grep -q "nixpkgs.url = \"github:NixOS/nixpkgs/$1\"" "$2/flake.nix" && echo "no match"' -- "$NIXPKGS_CHANNEL" "$TMP/workdir"
+    assert_success
+    assert_output "no match"
 }
