@@ -65,7 +65,7 @@ CLI tool — subscribe nix flake repos to centralized nixpkgs pin via nixpkgs-lo
 | T11 | x | `--status` mode — show subscription state per repo | I.cli.status |
 | T12 | x | bats unit tests for current script logic | C12 |
 | T13 | x | lefthook config — shellcheck, shfmt, bats, yamllint, etc. | C12 |
-| T14 | . | error recovery — partial failure resume, no `--force` push | V5 |
+| T14 | x | error recovery — partial failure resume, no `--force` push | V5 |
 | T15 | x | summary report (succeeded/skipped/failed) | - |
 | T16 | x | SPEC.md | - |
 | T17 | x | handle existing PR on re-run — report as succeeded | V11 |
