@@ -274,9 +274,9 @@ for repo in $REPOS; do
       echo "$WORKFLOW" >.github/workflows/update-pins.yml
 
       # Resolve only nixpkgs-lock input, don't touch other inputs
-      if ! nix flake lock --update-input nixpkgs-lock 2>/dev/null; then
-        echo "FAIL: nix flake lock"
-        failed+=("$repo: nix flake lock failed")
+      if ! nix flake update nixpkgs-lock 2>/dev/null; then
+        echo "FAIL: nix flake update"
+        failed+=("$repo: nix flake update failed")
         continue
       fi
 
