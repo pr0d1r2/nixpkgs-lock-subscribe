@@ -38,7 +38,7 @@ CLI tool — subscribe nix flake repos to centralized nixpkgs pin via nixpkgs-lo
 - V2: `sed -i` ! work on both Linux & macOS (GNU sed via nix `writeShellApplication`)
 - V3: re-run on subscribed repo with correct cron → zero git operations
 - V4: re-run on subscribed repo with wrong cron → PR to fix cron only
-- V5: ⊥ PR created if `nix flake lock` fails — report & continue
+- V5: ⊥ PR created if `nix flake update` fails — report & continue
 - V6: ⊥ OS-specific commands (`open -a Safari`, `xdg-open`)
 - V7: `--dry-run` ! produce zero side effects (§T.T10)
 - V8: single repo URL mode ! skip "list all repos" API call

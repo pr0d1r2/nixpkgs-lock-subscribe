@@ -721,7 +721,7 @@ SH
     refute_output --partial "ERROR"
 }
 
-@test "nix flake lock failure reports and continues" {
+@test "nix flake update failure reports and continues" {
     cat > "$TMP/bin/nix" <<'SH'
 #!/usr/bin/env bash
 exit 1
@@ -751,7 +751,7 @@ NIX
     checkout|add|commit)
         ;;
     push)
-        echo "ERROR: git push called after nix flake lock failure" >&2
+        echo "ERROR: git push called after nix flake update failure" >&2
         exit 1
         ;;
     *)
@@ -775,7 +775,7 @@ case "\$*" in
     *"pr list"*)
         ;;
     *"pr create"*)
-        echo "ERROR: gh pr create called after nix flake lock failure" >&2
+        echo "ERROR: gh pr create called after nix flake update failure" >&2
         exit 1
         ;;
     *)
@@ -786,7 +786,7 @@ SH
     chmod +x "$TMP/bin/gh"
     run bash nixpkgs-lock-subscribe.sh
     assert_success
-    assert_output --partial "FAIL: nix flake lock"
+    assert_output --partial "FAIL: nix flake update"
     refute_output --partial "ERROR"
 }
 
@@ -859,7 +859,7 @@ SH
     chmod +x "$TMP/bin/gh"
     run bash nixpkgs-lock-subscribe.sh
     assert_success
-    assert_output --partial "FAIL: nix flake lock"
+    assert_output --partial "FAIL: nix flake update"
     assert_output --partial "PR already exists"
     assert_output --partial "Succeeded: 1"
     assert_output --partial "Failed: 1"
