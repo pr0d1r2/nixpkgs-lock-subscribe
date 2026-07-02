@@ -789,3 +789,70 @@ SH
     assert_output --partial "FAIL: nix flake lock"
     refute_output --partial "ERROR"
 }
+
+@test "cron-fix PR creation failure reports and continues" {
+    cat > "$TMP/bin/git" <<'SH'
+#!/usr/bin/env bash
+case "$1" in
+    config)
+        case "$2" in
+            user.name) echo "Test User" ;;
+            user.email) echo "test@example.com" ;;
+        esac
+        ;;
+    clone)
+        repo_name="${4##*/}"
+        repo_name="${repo_name%.git}"
+        mkdir -p "$repo_name"
+        cat > "$repo_name/flake.nix" <<'NIX'
+{
+  inputs = {
+    nixpkgs-lock.url = "github:testuser/nixpkgs-lock";
+    nixpkgs.follows = "nixpkgs-lock/nixpkgs";
+  };
+}
+NIX
+        mkdir -p "$repo_name/.github/workflows"
+        cat > "$repo_name/.github/workflows/update-pins.yml" <<'YML'
+on:
+  schedule:
+    - cron: '30 6 * * *'
+YML
+        ;;
+    checkout|add|commit|push)
+        ;;
+    *)
+        command git "$@"
+        ;;
+esac
+SH
+    chmod +x "$TMP/bin/git"
+    cat > "$TMP/bin/gh" <<SH
+#!/usr/bin/env bash
+case "\$*" in
+    "api /user --jq .login")
+        echo "testuser"
+        ;;
+    *"repos/testuser/nixpkgs-lock/contents/flake.nix"*)
+        echo "$NIXPKGS_LOCK_FLAKE_B64"
+        ;;
+    *"repo list"*)
+        echo "repo-wrong-cron"
+        ;;
+    *"pr list"*)
+        ;;
+    *"pr create"*)
+        echo "gh: Could not create PR" >&2
+        exit 1
+        ;;
+    *)
+        echo "gh mock: \$*" >&2
+        ;;
+esac
+SH
+    chmod +x "$TMP/bin/gh"
+    run bash nixpkgs-lock-subscribe.sh
+    assert_success
+    assert_output --partial "FAIL: PR creation"
+    assert_output --partial "Failed: 1"
+}

@@ -220,12 +220,24 @@ for repo in $REPOS; do
               continue
             fi
           fi
-          gh pr create \
+          pr_output=$(gh pr create \
             --repo "$GITHUB_USER/$repo" \
             --head "$BRANCH" \
             --title "Fix nixpkgs-lock pin update cron schedule" \
-            --body "Update cron from $current_cron to 3:30 UTC (5:30 AM CEST)." || true
-          succeeded+=("$repo (cron fix)")
+            --body "Update cron from $current_cron to 3:30 UTC (5:30 AM CEST)." 2>&1) || true
+
+          if [[ "$pr_output" =~ already\ exists ]]; then
+            existing_url=$(echo "$pr_output" | grep -oE 'https://[^ ]+')
+            echo "PR already exists: $existing_url (branch updated)"
+            succeeded+=("$repo (updated existing PR)")
+          elif [[ "$pr_output" =~ ^https:// ]]; then
+            echo "PR: $pr_output"
+            succeeded+=("$repo (cron fix)")
+          else
+            echo "FAIL: PR creation"
+            failed+=("$repo: PR creation failed")
+            continue
+          fi
         fi
       fi
     else
