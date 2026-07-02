@@ -128,15 +128,15 @@ jobs:
   update:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: cachix/install-nix-action@v27
+      - uses: cachix/install-nix-action@v31
 
       - run: nix flake update nixpkgs-lock
 
       - run: nix flake check --no-build
 
-      - uses: peter-evans/create-pull-request@v6
+      - uses: peter-evans/create-pull-request@v7
         with:
           commit-message: "chore: update nixpkgs-lock pin"
           title: "chore: update nixpkgs-lock pin"
