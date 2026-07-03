@@ -136,7 +136,7 @@ jobs:
 
       - run: nix flake check --no-build
 
-      - uses: peter-evans/create-pull-request@v7
+      - uses: peter-evans/create-pull-request@v8
         with:
           commit-message: "chore: update nixpkgs-lock pin"
           title: "chore: update nixpkgs-lock pin"
