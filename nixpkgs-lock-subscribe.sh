@@ -66,8 +66,17 @@ EOF
 done
 
 GITHUB_USER=$(gh api /user --jq .login)
+if [[ -z "$GITHUB_USER" ]]; then
+  echo "ERROR: could not determine GitHub user (is 'gh auth login' done?)"
+  exit 1
+fi
+
 GIT_NAME=$(git config user.name)
 GIT_EMAIL=$(git config user.email)
+if [[ -z "$GIT_NAME" || -z "$GIT_EMAIL" ]]; then
+  echo "ERROR: git config user.name and user.email must be set"
+  exit 1
+fi
 
 NIXPKGS_CHANNEL=$(gh api "repos/$GITHUB_USER/nixpkgs-lock/contents/flake.nix" --jq '.content' |
   base64 -d |
@@ -128,7 +137,7 @@ jobs:
   update:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: cachix/install-nix-action@v31
 
@@ -136,7 +145,7 @@ jobs:
 
       - run: nix flake check --no-build
 
-      - uses: peter-evans/create-pull-request@v7
+      - uses: peter-evans/create-pull-request@v8
         with:
           commit-message: "chore: update nixpkgs-lock pin"
           title: "chore: update nixpkgs-lock pin"

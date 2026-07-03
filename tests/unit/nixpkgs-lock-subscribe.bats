@@ -932,3 +932,56 @@ SH
     assert_output --partial "FAIL: PR creation"
     assert_output --partial "Failed: 1"
 }
+
+@test "fails early when gh auth not configured" {
+    cat > "$TMP/bin/gh" <<'SH'
+#!/usr/bin/env bash
+echo ""
+SH
+    chmod +x "$TMP/bin/gh"
+    run bash nixpkgs-lock-subscribe.sh
+    assert_failure
+    assert_output --partial "ERROR: could not determine GitHub user"
+}
+
+@test "fails early when git user.name not set" {
+    cat > "$TMP/bin/git" <<'SH'
+#!/usr/bin/env bash
+case "$1" in
+    config)
+        case "$2" in
+            user.name) echo "" ;;
+            user.email) echo "test@example.com" ;;
+        esac
+        ;;
+    *)
+        command git "$@"
+        ;;
+esac
+SH
+    chmod +x "$TMP/bin/git"
+    run bash nixpkgs-lock-subscribe.sh
+    assert_failure
+    assert_output --partial "ERROR: git config user.name and user.email must be set"
+}
+
+@test "fails early when git user.email not set" {
+    cat > "$TMP/bin/git" <<'SH'
+#!/usr/bin/env bash
+case "$1" in
+    config)
+        case "$2" in
+            user.name) echo "Test User" ;;
+            user.email) echo "" ;;
+        esac
+        ;;
+    *)
+        command git "$@"
+        ;;
+esac
+SH
+    chmod +x "$TMP/bin/git"
+    run bash nixpkgs-lock-subscribe.sh
+    assert_failure
+    assert_output --partial "ERROR: git config user.name and user.email must be set"
+}
