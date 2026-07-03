@@ -66,8 +66,17 @@ EOF
 done
 
 GITHUB_USER=$(gh api /user --jq .login)
+if [[ -z "$GITHUB_USER" ]]; then
+  echo "ERROR: could not determine GitHub user (is 'gh auth login' done?)"
+  exit 1
+fi
+
 GIT_NAME=$(git config user.name)
 GIT_EMAIL=$(git config user.email)
+if [[ -z "$GIT_NAME" || -z "$GIT_EMAIL" ]]; then
+  echo "ERROR: git config user.name and user.email must be set"
+  exit 1
+fi
 
 NIXPKGS_CHANNEL=$(gh api "repos/$GITHUB_USER/nixpkgs-lock/contents/flake.nix" --jq '.content' |
   base64 -d |
