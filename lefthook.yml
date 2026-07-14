@@ -1,75 +1,21 @@
 ---
-output:
-  - failure
-
-remotes:
-  - git_url: https://github.com/pr0d1r2/nix-lefthook-shellcheck
-    ref: main
-    configs:
-      - lefthook-remote.yml
-  - git_url: https://github.com/pr0d1r2/nix-lefthook-shfmt
-    ref: main
-    configs:
-      - lefthook-remote.yml
-  - git_url: https://github.com/pr0d1r2/nix-lefthook-bats-parse
-    ref: main
-    configs:
-      - lefthook-remote.yml
-  - git_url: https://github.com/pr0d1r2/nix-lefthook-yamllint
-    ref: main
-    configs:
-      - lefthook-remote.yml
-  - git_url: https://github.com/pr0d1r2/nix-lefthook-typos
-    ref: main
-    configs:
-      - lefthook-remote.yml
-  - git_url: https://github.com/pr0d1r2/nix-lefthook-trailing-whitespace
-    ref: main
-    configs:
-      - lefthook-remote.yml
-  - git_url: https://github.com/pr0d1r2/nix-lefthook-missing-final-newline
-    ref: main
-    configs:
-      - lefthook-remote.yml
-  - git_url: https://github.com/pr0d1r2/nix-lefthook-git-conflict-markers
-    ref: main
-    configs:
-      - lefthook-remote.yml
-  - git_url: https://github.com/pr0d1r2/nix-lefthook-editorconfig-checker
-    ref: main
-    configs:
-      - lefthook-remote.yml
-  - git_url: https://github.com/pr0d1r2/nix-lefthook-git-no-local-paths
-    ref: main
-    configs:
-      - lefthook-remote.yml
-  - git_url: https://github.com/pr0d1r2/nix-lefthook-file-size-check
-    ref: main
-    configs:
-      - lefthook-remote.yml
-  - git_url: https://github.com/pr0d1r2/nix-lefthook-gitleaks
-    ref: main
-    configs:
-      - lefthook-remote.yml
-  - git_url: https://github.com/pr0d1r2/nix-lefthook-nix-flake-check
-    ref: main
-    configs:
-      - lefthook-remote.yml
-  - git_url: https://github.com/pr0d1r2/nix-lefthook-tdd-order-bats
-    ref: main
-    configs:
-      - lefthook-remote.yml
 
 pre-commit:
-  parallel: true
   commands:
-    bats-unit:
-      glob: "*.bats"
-      run: timeout ${LEFTHOOK_BATS_UNIT_TIMEOUT:-120} bats --jobs "$(nproc)" {staged_files}
+    markdownlint:
+      glob: "*.md"
+      exclude: "^(\\.claude/skills/)"
+      run: timeout ${LEFTHOOK_MARKDOWNLINT_TIMEOUT:-30} lefthook-markdownlint {staged_files}
+    yamllint:
+      glob: "*.{yml,yaml}"
+      run: timeout ${LEFTHOOK_YAMLLINT_TIMEOUT:-30} lefthook-yamllint {staged_files}
 
 pre-push:
-  parallel: true
   commands:
-    bats-unit:
-      glob: "*.bats"
-      run: timeout ${LEFTHOOK_BATS_UNIT_TIMEOUT:-120} bats --jobs "$(nproc)" {push_files}
+    markdownlint:
+      glob: "*.md"
+      exclude: "^(\\.claude/skills/)"
+      run: timeout ${LEFTHOOK_MARKDOWNLINT_TIMEOUT:-30} lefthook-markdownlint {push_files}
+    yamllint:
+      glob: "*.{yml,yaml}"
+      run: timeout ${LEFTHOOK_YAMLLINT_TIMEOUT:-30} lefthook-yamllint {push_files}
