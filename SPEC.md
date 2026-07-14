@@ -75,4 +75,6 @@ CLI tool — subscribe nix flake repos to centralized nixpkgs pin via nixpkgs-lo
 
 ## §B BUGS
 
-(none yet)
+| id | date | cause | fix |
+|----|------|-------|-----|
+| B1 | 2026-07-14 | `lefthook.yml` invoked `lefthook-markdownlint-agentic`, a command not provided by the `nix-dev-shell-agentic` ci devShell (only `lefthook-markdownlint`/`lefthook-yamllint` exist) → CI `markdownlint-agentic` hook exited 127 (`No such file or directory`) | Removed the `markdownlint-agentic` command from `pre-commit` and `pre-push` in `lefthook.yml` |
