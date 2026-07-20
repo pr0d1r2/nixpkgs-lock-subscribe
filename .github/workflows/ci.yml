@@ -1,32 +1,12 @@
 ---
 name: CI
 
-on:
+"on":
   push:
     branches: [main]
   pull_request:
     branches: [main]
-  workflow_dispatch:
 
 jobs:
-  build-linux:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: pr0d1r2/nix-lefthook-ci-action@ce9a118b05e90e186dba48a82067adeed185f7d4
-
-  build-linux-arm:
-    needs: build-linux
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: pr0d1r2/nix-lefthook-ci-action@ce9a118b05e90e186dba48a82067adeed185f7d4
-        with:
-          extra-platforms: aarch64-linux
-
-  build-macos:
-    needs: build-linux-arm
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: pr0d1r2/nix-lefthook-ci-action@ce9a118b05e90e186dba48a82067adeed185f7d4
+  guardrails:
+    uses: pr0d1r2/set-and-setting/.github/workflows/guardrails.yml@main
