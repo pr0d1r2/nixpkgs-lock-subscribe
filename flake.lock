@@ -2310,11 +2310,11 @@
         "nixpkgs-lock": "nixpkgs-lock_6"
       },
       "locked": {
-        "lastModified": 1784677687,
-        "narHash": "sha256-UCqWJINfB39FaLITSK1cvpR0Vxce+IknvLL2xJWIlSM=",
+        "lastModified": 1784729933,
+        "narHash": "sha256-ksyKHGat48DjfBpTx52kC4WTeQdz4pHlYUEjXu1tgp0=",
         "owner": "pr0d1r2",
         "repo": "set-and-setting",
-        "rev": "f103e2252f3b947d4fbe1f6209ad2277c4a55779",
+        "rev": "fa89541d7fab4ccfa32a07d5b100c38ead1f9b99",
         "type": "github"
       },
       "original": {
