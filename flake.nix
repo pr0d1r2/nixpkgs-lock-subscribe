@@ -23,6 +23,25 @@
     }:
     set-and-setting.lib.mkConsumerFlake {
       inherit self nixpkgs set-and-setting;
+      lib = set-and-setting.lib // {
+        checksFor =
+          {
+            pkgs,
+            src,
+            fragments,
+          }:
+          (set-and-setting.lib.checksFor {
+            inherit pkgs src;
+            fragments = builtins.filter (fragment: fragment != "actions") fragments;
+          })
+          // {
+            actionlint = pkgs.runCommand "actionlint-check" { nativeBuildInputs = [ pkgs.actionlint ]; } ''
+              cd ${src}/.github/workflows
+              actionlint *.yml *.yaml
+              touch $out
+            '';
+          };
+      };
       fragments = [
         "base"
         "actions"
