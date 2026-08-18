@@ -16,12 +16,14 @@ let
 
   fragments = [
     "base"
+    "actions"
     "nix"
     "shell"
     "ascii"
     "markdown"
     "yaml"
   ];
+  checkFragments = builtins.filter (fragment: fragment != "actions") fragments;
 in
 {
   packages = forAllSystems (pkgs: {
@@ -52,10 +54,20 @@ in
 
   checks = forAllSystems (
     pkgs:
-    (set-and-setting.lib.checksFor {
-      inherit pkgs fragments;
-      src = ./.;
-    })
+    (
+      set-and-setting.lib.checksFor {
+        inherit pkgs;
+        fragments = checkFragments;
+        src = ./.;
+      }
+      // {
+        actionlint = pkgs.runCommand "actionlint-check" { nativeBuildInputs = [ pkgs.actionlint ]; } ''
+          cd ${./.github/workflows}
+          actionlint *.yml *.yaml
+          touch $out
+        '';
+      }
+    )
     // {
       dep-graph = set-and-setting.lib.mkDepGraphCheck {
         inherit pkgs;

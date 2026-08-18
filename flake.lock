@@ -1,5 +1,21 @@
 {
   "nodes": {
+    "nix-lefthook-actionlint-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1786448212,
+        "narHash": "sha256-XFCROBO3hayrJmCTALvKeBdNrkT5Wv5E4X4Uda7KOQ8=",
+        "owner": "pr0d1r2",
+        "repo": "nix-lefthook-actionlint",
+        "rev": "87b9a3c3f611168d80de67a0d4ca1f85045c2ec1",
+        "type": "github"
+      },
+      "original": {
+        "owner": "pr0d1r2",
+        "repo": "nix-lefthook-actionlint",
+        "type": "github"
+      }
+    },
     "nix-lefthook-ascii-only-src": {
       "flake": false,
       "locked": {
@@ -189,6 +205,22 @@
       "original": {
         "owner": "pr0d1r2",
         "repo": "nix-lefthook-gitleaks",
+        "type": "github"
+      }
+    },
+    "nix-lefthook-linter-coverage-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1780976270,
+        "narHash": "sha256-sfhtIOXilfMSRYupNfu4RpxIJGgaS2x9PKAkByQZ6Ro=",
+        "owner": "pr0d1r2",
+        "repo": "nix-lefthook-linter-coverage-full",
+        "rev": "fe4793605fb84208723a135be2be40bd8d41bcf0",
+        "type": "github"
+      },
+      "original": {
+        "owner": "pr0d1r2",
+        "repo": "nix-lefthook-linter-coverage-full",
         "type": "github"
       }
     },
@@ -450,16 +482,16 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1782847189,
-        "narHash": "sha256-twXPFqFsrrY5r28Zh7Homgcp2gUMBgQ6WDS98Q/3xFI=",
+        "lastModified": 1786943417,
+        "narHash": "sha256-b4qgjdFtlz5TAZ1Hi7DFJeqX3sjaDUnrwr9OO+O1rM0=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "b6018f87da91d19d0ab4cf979885689b469cdd41",
+        "rev": "0dd31db7e6dbf9ce05697c4545f6fe01accec994",
         "type": "github"
       },
       "original": {
         "owner": "NixOS",
-        "ref": "nixos-25.11",
+        "ref": "nixos-26.05",
         "repo": "nixpkgs",
         "type": "github"
       }
@@ -469,11 +501,11 @@
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "lastModified": 1785577364,
-        "narHash": "sha256-mXrCY7YrsZXZ7r9B80a7I2XTA1nLD//B0viIvlvNqYU=",
+        "lastModified": 1786953279,
+        "narHash": "sha256-VaqLfMIYLgtjSusde1fjyohFxmEVB3lzV1icd/akDYg=",
         "owner": "pr0d1r2",
         "repo": "nixpkgs-lock",
-        "rev": "efe144236bdd27523c162ea8ab97d7ada904edf2",
+        "rev": "176324a6b4b5a903baa32938b35608758484de2c",
         "type": "github"
       },
       "original": {
@@ -494,6 +526,7 @@
     },
     "set-and-setting": {
       "inputs": {
+        "nix-lefthook-actionlint-src": "nix-lefthook-actionlint-src",
         "nix-lefthook-ascii-only-src": "nix-lefthook-ascii-only-src",
         "nix-lefthook-bats-parse-src": "nix-lefthook-bats-parse-src",
         "nix-lefthook-bats-unit-src": "nix-lefthook-bats-unit-src",
@@ -506,6 +539,7 @@
         "nix-lefthook-git-conflict-markers-src": "nix-lefthook-git-conflict-markers-src",
         "nix-lefthook-git-no-local-paths-src": "nix-lefthook-git-no-local-paths-src",
         "nix-lefthook-gitleaks-src": "nix-lefthook-gitleaks-src",
+        "nix-lefthook-linter-coverage-src": "nix-lefthook-linter-coverage-src",
         "nix-lefthook-markdownlint-agentic-src": "nix-lefthook-markdownlint-agentic-src",
         "nix-lefthook-markdownlint-src": "nix-lefthook-markdownlint-src",
         "nix-lefthook-missing-final-newline-src": "nix-lefthook-missing-final-newline-src",
@@ -532,11 +566,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1786451084,
-        "narHash": "sha256-Re5J9+Z3lBPFmFTohEa9oV4TZP/Tdh5Kwbu916XczYs=",
+        "lastModified": 1786498490,
+        "narHash": "sha256-dtbB05KTBAEBSjSX+a8USuNM+KbxvjHCu6nanIWIAYY=",
         "owner": "pr0d1r2",
         "repo": "set-and-setting",
-        "rev": "989b578c336d548d46954ab97d6cce6c77ede109",
+        "rev": "acdfbc3b03ddf19722af4077ec854df9f9cd4e7d",
         "type": "github"
       },
       "original": {
