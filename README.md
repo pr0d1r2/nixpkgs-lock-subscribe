@@ -1,5 +1,11 @@
 # nixpkgs-lock-subscribe
 
+<!-- hallucinogen:autonomy-disclaimer start -->
+> Read [LLM-DISCLAIMER](docs/LLM-DISCLAIMER.md) first — this repository is
+> tended by an autonomous loop, and that file says what the loop may do here,
+> what it may not, and what to check before trusting anything in this tree.
+<!-- hallucinogen:autonomy-disclaimer end -->
+
 Subscribe your nix flake repos to a centralized nixpkgs pin via [nixpkgs-lock](https://github.com/pr0d1r2/nixpkgs-lock).
 
 Scans your public GitHub repositories and rewrites direct `nixpkgs` pins to follow `nixpkgs-lock/nixpkgs`, then installs a daily cron workflow to auto-pull pin updates.
